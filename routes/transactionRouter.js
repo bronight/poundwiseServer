@@ -1,21 +1,30 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const Transaction = require('../models/transaction');
 
 const transactionRouter = express.Router();
 
 transactionRouter.use(bodyParser.json());
 
 transactionRouter.route('/')
-.all((req, res, next) => {
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    next();
+.get((req, res, next) => {
+    Transaction.find()
+    .then(transactions => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(transactions);
+    })
+    .catch(err => next(err));
 })
-.get((req, res) => {
-    res.end('Will send all the transactions to you.');
-})
-.post((req, res) => {
-    res.end(`Will add the transaction: ${req.body.name} with the description: ${req.body.description}`);
+.post((req, res, next) => {
+    Transaction.create(req.body)
+    .then(transaction => {
+        console.log('Transaction Created ', transaction);
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(transaction);
+    })
+    .catch(err => next(err));
 })
 .put((req, res) => {
     res.statusCode = 403;
