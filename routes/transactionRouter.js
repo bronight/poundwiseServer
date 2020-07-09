@@ -1,13 +1,16 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const Transaction = require('../models/transaction');
+const authenticate = require('../authenticate');
+const cors = require('./cors');
 
 const transactionRouter = express.Router();
 
 transactionRouter.use(bodyParser.json());
 
 transactionRouter.route('/')
-.get((req, res, next) => {
+.options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
+.get(cors.cors, (req, res, next) => {
     Transaction.find()
     .then(transactions => {
         res.statusCode = 200;
@@ -16,7 +19,7 @@ transactionRouter.route('/')
     })
     .catch(err => next(err));
 })
-.post((req, res, next) => {
+.post(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     Transaction.create(req.body)
     .then(transaction => {
         console.log('Transaction Created ', transaction);
@@ -26,31 +29,54 @@ transactionRouter.route('/')
     })
     .catch(err => next(err));
 })
-.put((req, res) => {
+.put(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     res.statusCode = 403;
     res.end('PUT not supported on /transactions.');
 })
-.delete((req, res) => {
-    res.end('Deleting all transactions');
+.delete(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    Transaction.deleteMany()
+    .then(response => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(response);
+    })
+    .catch(err => next(err));
 });
 
 transactionRouter.route('/:transactionID')
-.all((req, res, next) => {
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    next();
+.options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
+.get(cors.cors, (req, res, next) => {
+    Transaction.findById(req.params.transactionId)
+    .then(transaction => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(transaction);
+    })
+    .catch(err => next(err));
 })
-.get((req, res) => {
-    res.end(`Will send the transaction ${req.params.transactionID} to you.`);
+.post(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    res.statusCode = 403;
+    res.end(`POST operation not supported on /transactions/${req.params.transactionId}`);
 })
-.post((req, res) => {
-    res.end(`Will add the transaction: ${req.params.transactionID} with the name: ${req.body.name} and description: ${req.body.description}`);
+.put(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    Transaction.findByIdAndUpdate(req.params.transactionId, {
+        $set: req.body
+    }, { new: true })
+    .then(transaction => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(transaction);
+    })
+    .catch(err => next(err));
 })
-.put((req, res) => {
-    res.end(`Will update the transaction ${req.params.transactionID}.`);
-})
-.delete((req, res) => {
-    res.end(`Will delete the transaction: ${req.params.transactionID}`);
+.delete(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    Transaction.findByIdAndDelete(req.params.transactionId)
+    .then(response => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(response);
+    })
+    .catch(err => next(err));
 });
 
 module.exports = transactionRouter;

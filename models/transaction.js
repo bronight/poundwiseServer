@@ -4,11 +4,6 @@ const Currency = mongoose.Types.Currency;
 const Schema = mongoose.Schema;
 
 const transactionSchema = new Schema({
-    name: {
-        type: String,
-        required: true,
-        unique: true
-    },
     description: {
         type: String,
         required: true
