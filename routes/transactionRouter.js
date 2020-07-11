@@ -43,9 +43,10 @@ transactionRouter.route('/')
     .catch(err => next(err));
 });
 
-transactionRouter.route('/:transactionID')
+transactionRouter.route('/:transactionId')
 .options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
 .get(cors.cors, (req, res, next) => {
+    console.log(req.params.transactionId);
     Transaction.findById(req.params.transactionId)
     .then(transaction => {
         res.statusCode = 200;

@@ -1,47 +1,83 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const Bill = require('../models/bill');
+const authenticate = require('../authenticate');
+const cors = require('./cors');
 
 const billRouter = express.Router();
 
 billRouter.use(bodyParser.json());
 
 billRouter.route('/')
-.all((req, res, next) => {
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    next();
+.options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
+.get(cors.cors, (req, res, next) => {
+    Bill.find()
+    .then(bills => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(bills);
+    })
+    .catch(err => next(err));
 })
-.get((req, res) => {
-    res.end('Will send all the bills to you.');
+.post(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    Bill.create(req.body)
+    .then(bill => {
+        console.log('Bill Created ', bill);
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(bill);
+    })
+    .catch(err => next(err));
 })
-.post((req, res) => {
-    res.end(`Will add the bill: ${req.body.name} with the description: ${req.body.description}`);
-})
-.put((req, res) => {
+.put(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
     res.statusCode = 403;
     res.end('PUT not supported on /bills.');
 })
-.delete((req, res) => {
-    res.end('Deleting all bills');
+.delete(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    Bill.deleteMany()
+    .then(response => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(response);
+    })
+    .catch(err => next(err));
 });
 
-billRouter.route('/:billID')
-.all((req, res, next) => {
-    res.statusCode = 200;
-    res.setHeader('Content-Type', 'text/plain');
-    next();
+billRouter.route('/:billId')
+.options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
+.get(cors.cors, (req, res, next) => {
+    console.log(req.params.billId);
+    Bill.findById(req.params.billId)
+    .then(bill => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(bill);
+    })
+    .catch(err => next(err));
 })
-.get((req, res) => {
-    res.end(`Will send the bill ${req.params.billID} to you.`);
+.post(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    res.statusCode = 403;
+    res.end(`POST operation not supported on /bills/${req.params.billId}`);
 })
-.post((req, res) => {
-    res.end(`Will add the bill: ${req.params.billID} with the name: ${req.body.name} and description: ${req.body.description}`);
+.put(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    Bill.findByIdAndUpdate(req.params.billId, {
+        $set: req.body
+    }, { new: true })
+    .then(bill => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(bill);
+    })
+    .catch(err => next(err));
 })
-.put((req, res) => {
-    res.end(`Will update the bill ${req.params.billID}.`);
-})
-.delete((req, res) => {
-    res.end(`Will delete the bill: ${req.params.billID}`);
+.delete(cors.corsWithOptions, authenticate.verifyUser, authenticate.verifyAdmin, (req, res, next) => {
+    Bill.findByIdAndDelete(req.params.billId)
+    .then(response => {
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'application/json');
+        res.json(response);
+    })
+    .catch(err => next(err));
 });
 
 module.exports = billRouter;
